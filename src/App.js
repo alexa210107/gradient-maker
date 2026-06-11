@@ -271,7 +271,7 @@ function SideBar({ onClose, gradientTypes, gradientType, setGradientType, aspect
               אנימציה
             </button>
           </div>
-          {isAnimated && (<><SliderRow label="משך זמן" value={`${animationDuration}s`} defaultValue={animationDuration} minValue={1} maxValue={30} onChange={setAnimationDuration} /><SliderRow label="מהירות" value={`${animationSpeed}x`} defaultValue={animationSpeed} minValue={0.25} maxValue={4} step={0.25} onChange={setAnimationSpeed} /></>)}
+          {isAnimated && (<><SliderRow label="משך זמן" value={`${animationDuration}s`} defaultValue={animationDuration} minValue={1} maxValue={30} onChange={setAnimationDuration} /><SliderRow label="עוצמת תנועה" value={`${animationSpeed}x`} defaultValue={animationSpeed} minValue={0.25} maxValue={4} step={0.25} onChange={setAnimationSpeed} /></>)}
         </SidebarSection>
       </div>
     </aside>
@@ -283,57 +283,15 @@ const NOISE_SVG = `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='h
 
 
 const IMAGE_FORMATS = [
-  {
-    id: 'png',
-    label: 'PNG',
-    description: 'איכות מקסימלית, שקיפות',
-    mime: 'image/png',
-    ext: 'png',
-    quality: null,
-  },
-  {
-    id: 'jpeg',
-    label: 'JPEG',
-    description: 'קובץ קטן, לתמונות',
-    mime: 'image/jpeg',
-    ext: 'jpg',
-    quality: 0.92,
-  },
-  {
-    id: 'webp',
-    label: 'WebP',
-    description: 'מודרני, גם שקיפות',
-    mime: 'image/webp',
-    ext: 'webp',
-    quality: 0.92,
-  },
-  {
-    id: 'svg',
-    label: 'SVG',
-    description: 'וקטורי, גודל חופשי',
-    mime: 'image/svg+xml',
-    ext: 'svg',
-    quality: null,
-  },
+  { id: 'png', label: 'PNG', description: 'איכות מקסימלית, שקיפות', mime: 'image/png', ext: 'png', quality: null },
+  { id: 'jpeg', label: 'JPEG', description: 'קובץ קטן, לתמונות', mime: 'image/jpeg', ext: 'jpg', quality: 0.92 },
+  { id: 'webp', label: 'WebP', description: 'מודרני, גם שקיפות', mime: 'image/webp', ext: 'webp', quality: 0.92 },
+  { id: 'svg', label: 'SVG', description: 'וקטורי, גודל חופשי', mime: 'image/svg+xml', ext: 'svg', quality: null },
 ];
 
-
 const VIDEO_FORMATS = [
-  {
-    id: 'webm',
-    label: 'WebM',
-    description: 'תמיכה רחבה בדפדפנים',
-    mime: 'video/webm',
-    ext: 'webm',
-  },
-  {
-    id: 'mp4',
-    label: 'MP4',
-    description: 'תואם לכל מכשיר',
-    mime: 'video/mp4',
-    ext: 'mp4',
-    fallbackMime: 'video/webm',
-  },
+  { id: 'webm', label: 'WebM', description: 'תמיכה רחבה בדפדפנים', mime: 'video/webm', ext: 'webm' },
+  { id: 'mp4', label: 'MP4', description: 'תואם לכל מכשיר', mime: 'video/mp4', ext: 'mp4', fallbackMime: 'video/webm' },
 ];
 
 function ExportModal({ gradientCss, sortedStops, gradientType, angle, centerX, centerY, animationDuration, animationSpeed, isAnimated, aspectRatio, freeWidth, freeHeight, blur, noise, onClose }) {
@@ -352,7 +310,6 @@ function ExportModal({ gradientCss, sortedStops, gradientType, angle, centerX, c
   const [exportStatusText, setExportStatusText] = useState('');
   const effectiveDuration = animationDuration;
 
- 
   const [selectedImageFormat, setSelectedImageFormat] = useState('png');
   const [selectedVideoFormat, setSelectedVideoFormat] = useState('webm');
   const [jpegQuality, setJpegQuality] = useState(92);
@@ -364,16 +321,22 @@ function ExportModal({ gradientCss, sortedStops, gradientType, angle, centerX, c
 
   const [exportW, exportH] = getExportSize();
   const previewPaddingBottom = `${((exportH / exportW) * 100).toFixed(4)}%`;
-  const animBgSize = `${300 * animationSpeed}% ${300 * animationSpeed}%`;
 
+  // For export preview: gentle drift using translate
   const applyFrame = useCallback((p) => {
-    const xPct = p < 0.5 ? p * 200 : (1 - (p - 0.5) * 2) * 100;
-    if (previewRef.current) previewRef.current.style.backgroundPosition = `${xPct}% 50%`;
+    // Subtle slow drift: sine wave on both axes
+    const driftAmt = (animationSpeed - 1) * 4 + 4; // 4–20px range
+    const dx = Math.sin(p * Math.PI * 2) * driftAmt;
+    const dy = Math.cos(p * Math.PI * 2 * 0.7) * driftAmt * 0.6;
+    const scaleVal = 1 + Math.sin(p * Math.PI * 2 * 0.5) * 0.012 * animationSpeed;
+    if (previewRef.current) {
+      previewRef.current.style.transform = `translate(${dx}px, ${dy}px) scale(${scaleVal})`;
+    }
     const pct = `${(p * 100).toFixed(2)}%`;
     if (fillRef.current) fillRef.current.style.width = pct;
     if (thumbRef.current) thumbRef.current.style.left = pct;
     if (timeRef.current) timeRef.current.textContent = `${(p * effectiveDuration).toFixed(1)}s / ${effectiveDuration.toFixed(1)}s`;
-  }, [effectiveDuration]);
+  }, [effectiveDuration, animationSpeed]);
 
   useEffect(() => {
     if (!isAnimated) { applyFrame(0); return; }
@@ -413,13 +376,11 @@ function ExportModal({ gradientCss, sortedStops, gradientType, angle, centerX, c
     return ctx.createLinearGradient(x0, y0, x1, y1);
   };
 
-
   const drawToCanvas = (ctx, W, H, p = 0) => {
     ctx.clearRect(0, 0, W, H);
     const smoothed = buildSmoothedStops(sortedStops);
 
-    
-    const paintGradient = (tCtx, VW, VH) => {
+    const paintGradient = (tCtx, VW, VH, offsetX = 0, offsetY = 0) => {
       if (gradientType === 'Linear') {
         const grad = cssLinearToCanvas(tCtx, VW, VH, angle);
         smoothed.forEach(s => { try { grad.addColorStop(s.position / 100, hexToRgba(s.color, s.opacity)); } catch {} });
@@ -451,14 +412,18 @@ function ExportModal({ gradientCss, sortedStops, gradientType, angle, centerX, c
     };
 
     if (p > 0) {
-      const scale = 3 * animationSpeed;
-      const VW = Math.round(W * scale);
-      const xPct = p < 0.5 ? p * 2 : 1 - (p - 0.5) * 2; 
-      const srcX = Math.round(xPct * (VW - W));
+      // Subtle drift: render slightly oversized canvas and crop with gentle offset
+      const pad = Math.round(Math.max(W, H) * 0.06 * animationSpeed);
+      const VW = W + pad * 2;
+      const VH = H + pad * 2;
+      const driftX = Math.sin(p * Math.PI * 2) * pad;
+      const driftY = Math.cos(p * Math.PI * 2 * 0.7) * pad * 0.6;
+      const srcX = pad + driftX;
+      const srcY = pad + driftY;
       const vCanvas = document.createElement('canvas');
-      vCanvas.width = VW; vCanvas.height = H;
-      paintGradient(vCanvas.getContext('2d'), VW, H);
-      ctx.drawImage(vCanvas, srcX, 0, W, H, 0, 0, W, H);
+      vCanvas.width = VW; vCanvas.height = VH;
+      paintGradient(vCanvas.getContext('2d'), VW, VH);
+      ctx.drawImage(vCanvas, srcX, srcY, W, H, 0, 0, W, H);
     } else {
       paintGradient(ctx, W, H);
     }
@@ -518,7 +483,6 @@ function ExportModal({ gradientCss, sortedStops, gradientType, angle, centerX, c
     return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><defs>${gradDef}${filterDef}</defs><rect width="${W}" height="${H}" fill="${fillRef2}"${filterAttr}/></svg>`;
   }, [sortedStops, gradientType, angle, centerX, centerY, blur]);
 
-  
   const doExportImage = useCallback(() => {
     const fmt = IMAGE_FORMATS.find(f => f.id === selectedImageFormat);
     const [W, H] = getExportSize();
@@ -547,23 +511,18 @@ function ExportModal({ gradientCss, sortedStops, gradientType, angle, centerX, c
     onClose();
   }, [selectedImageFormat, getExportSize, drawToCanvas, buildSvgString, jpegQuality, onClose]);
 
-
   const doExportVideo = useCallback(() => {
     const fmt = VIDEO_FORMATS.find(f => f.id === selectedVideoFormat);
-
     const [W, H] = getExportSize();
     const canvas = document.createElement('canvas');
     canvas.width = W; canvas.height = H;
     const ctx = canvas.getContext('2d');
     const stream = canvas.captureStream(30);
 
-  
     let mimeType = 'video/mp4';
     if (!MediaRecorder.isTypeSupported('video/mp4')) {
       mimeType = 'video/webm; codecs=vp9';
-      if (!MediaRecorder.isTypeSupported(mimeType)) {
-        mimeType = 'video/webm';
-      }
+      if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm';
     }
 
     const mediaRecorder = new MediaRecorder(stream, { mimeType });
@@ -596,7 +555,7 @@ function ExportModal({ gradientCss, sortedStops, gradientType, angle, centerX, c
       requestAnimationFrame(render);
     };
     requestAnimationFrame(render);
-  }, [selectedVideoFormat, getExportSize, effectiveDuration, drawToCanvas,  onClose]);
+  }, [selectedVideoFormat, getExportSize, effectiveDuration, drawToCanvas, onClose]);
 
   const activeImageFmt = IMAGE_FORMATS.find(f => f.id === selectedImageFormat);
   const activeVideoFmt = VIDEO_FORMATS.find(f => f.id === selectedVideoFormat);
@@ -609,11 +568,20 @@ function ExportModal({ gradientCss, sortedStops, gradientType, angle, centerX, c
           <button className="export-modal-close" onClick={onClose}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg></button>
         </div>
 
-        {/* Preview */}
         <div className="export-canvas-wrap">
           <div style={{ position: 'relative', width: '100%', paddingBottom: previewPaddingBottom, background: '#000', overflow: 'hidden', maxHeight: '40vh' }}>
             <div style={{ position: 'absolute', inset: 0, filter: blur > 0 ? `blur(${blur * 0.08}px)` : undefined, overflow: 'hidden' }}>
-              <div ref={previewRef} style={{ position: 'absolute', inset: 0, backgroundImage: gradientCss, backgroundSize: isAnimated ? animBgSize : '100% 100%', backgroundPosition: '0% 50%' }} />
+              <div
+                ref={previewRef}
+                style={{
+                  position: 'absolute',
+                  inset: '-8%',
+                  backgroundImage: gradientCss,
+                  backgroundSize: '100% 100%',
+                  willChange: 'transform',
+                  transition: 'none',
+                }}
+              />
               {noise > 0 && (
                 <div style={{ position: 'absolute', inset: 0, backgroundImage: NOISE_SVG, backgroundRepeat: 'repeat', backgroundSize: '150px 150px', opacity: (noise / 100) * 0.7, mixBlendMode: 'overlay', pointerEvents: 'none' }} />
               )}
@@ -635,11 +603,8 @@ function ExportModal({ gradientCss, sortedStops, gradientType, angle, centerX, c
           )}
         </div>
 
-        {/* Format selector */}
         <div className="export-format-section">
-          <div className="export-format-label">
-            {isAnimated ? 'פורמט סרטון' : 'פורמט תמונה'}
-          </div>
+          <div className="export-format-label">{isAnimated ? 'פורמט סרטון' : 'פורמט תמונה'}</div>
           <div className="export-format-grid">
             {(isAnimated ? VIDEO_FORMATS : IMAGE_FORMATS).map(fmt => (
               <button
@@ -654,38 +619,19 @@ function ExportModal({ gradientCss, sortedStops, gradientType, angle, centerX, c
               </button>
             ))}
           </div>
-
-          {/* JPEG quality slider */}
           {!isAnimated && selectedImageFormat === 'jpeg' && (
             <div className="export-quality-row">
-              <SliderRow
-                label="איכות"
-                value={`${jpegQuality}%`}
-                defaultValue={jpegQuality}
-                minValue={10}
-                maxValue={100}
-                onChange={setJpegQuality}
-              />
+              <SliderRow label="איכות" value={`${jpegQuality}%`} defaultValue={jpegQuality} minValue={10} maxValue={100} onChange={setJpegQuality} />
             </div>
           )}
-
-          {/* SVG notice */}
           {!isAnimated && selectedImageFormat === 'svg' && (
-            <div className="export-svg-note">
-              ⓘ SVG תומך ב-Linear וב-Radial. Conic ו-Freeform יומרו לגרדיאנט קווי.
-            </div>
+            <div className="export-svg-note">ⓘ SVG תומך ב-Linear וב-Radial. Conic ו-Freeform יומרו לגרדיאנט קווי.</div>
           )}
-
-          {/* MP4 note */}
           {isAnimated && selectedVideoFormat === 'mp4' && (
-            <div className="export-svg-note">
-              ⓘ MP4 נתמך בדפדפנים מסוימים. אם הדפדפן לא תומך, הקובץ יישמר כ-WebM עם סיומת .mp4
-            </div>
+            <div className="export-svg-note">ⓘ MP4 נתמך בדפדפנים מסוימים. אם הדפדפן לא תומך, הקובץ יישמר כ-WebM עם סיומת .mp4</div>
           )}
-
         </div>
 
-        {/* Size info */}
         <div className="export-modal-info">
           {isAnimated
             ? `${activeVideoFmt?.label} · ${exportW}×${exportH}px · ${effectiveDuration.toFixed(1)} שניות`
@@ -793,7 +739,6 @@ function GradientColorEditor({ colorStops, activeStopId, activeStop, gradientCss
 }
 
 
-
 function SidebarSection({ title, headerRight, children }) {
   const [isOpen, setIsOpen] = useState(true);
   return (
@@ -808,7 +753,6 @@ function SidebarSection({ title, headerRight, children }) {
 }
 
 
-
 function SliderRow({ label, value, defaultValue, minValue, maxValue, step = 1, onChange }) {
   return (
     <div className="slider-row">
@@ -817,7 +761,6 @@ function SliderRow({ label, value, defaultValue, minValue, maxValue, step = 1, o
     </div>
   );
 }
-
 
 
 function Preview({ gradientCss, aspectRatio, freeWidth, freeHeight, animationDuration, animationSpeed, isAnimated, blur, noise }) {
@@ -842,9 +785,43 @@ function Preview({ gradientCss, aspectRatio, freeWidth, freeHeight, animationDur
     return () => clearTimeout(timer);
   }, [gradientCss]);
 
-  const animStyle = isAnimated
-    ? { backgroundSize: `${300 * animationSpeed}% ${300 * animationSpeed}%`, animation: `gradientShift ${animationDuration}s ease infinite` }
-    : { backgroundSize: '100% 100%' };
+  // RAF-driven nudge: background-size is 110% so there's a tiny margin to pan within.
+  // background-position oscillates between ~45%–55% on each axis — all colours stay
+  // fully visible the whole time, they just breathe gently in place.
+  const innerLayerRef = useRef(null);
+  const rafRef = useRef(null);
+  const clockRef = useRef(0);
+  const lastTsRef = useRef(null);
+
+  useEffect(() => {
+    if (!isAnimated) {
+      if (innerLayerRef.current) innerLayerRef.current.style.backgroundPosition = '50% 50%';
+      return;
+    }
+    const speed = animationSpeed;
+    const duration = animationDuration;
+
+    const tick = (ts) => {
+      if (lastTsRef.current !== null) clockRef.current += (ts - lastTsRef.current) / 1000;
+      lastTsRef.current = ts;
+      const t = (clockRef.current % duration) / duration; // 0→1 loop
+      // Two independent slow sine waves for x and y — always stay near 50%
+      const amp = 25; // pan ±25% around center — all colours stay in frame
+      const x = 50 + Math.sin(t * Math.PI * 2) * amp;
+      const y = 50 + Math.cos(t * Math.PI * 2 * 0.7) * amp * 0.6;
+      if (innerLayerRef.current) innerLayerRef.current.style.backgroundPosition = `${x.toFixed(2)}% ${y.toFixed(2)}%`;
+      rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => {
+      cancelAnimationFrame(rafRef.current);
+      lastTsRef.current = null;
+    };
+  }, [isAnimated, animationDuration, animationSpeed]);
+
+  // background-size is 150% so the gradient is larger than the card.
+  // Panning 0%→100% on position moves exactly one "extra half" — all colours stay visible.
+  const bgSize = isAnimated ? '150% 150%' : '100% 100%';
 
   return (
     <main className="preview-area">
@@ -854,13 +831,23 @@ function Preview({ gradientCss, aspectRatio, freeWidth, freeHeight, animationDur
             key={layer.key}
             style={{
               position: 'absolute', inset: 0,
-              backgroundImage: layer.css,
-              ...animStyle,
+              overflow: 'hidden',
               opacity: i === layers.length - 1 ? 1 : 0,
               transition: i === layers.length - 1 && layers.length > 1 ? 'opacity 0.3s ease' : 'none',
               borderRadius: 'inherit',
             }}
-          />
+          >
+            <div
+              ref={i === layers.length - 1 ? innerLayerRef : null}
+              style={{
+                position: 'absolute',
+                inset: 0,
+                backgroundImage: layer.css,
+                backgroundSize: bgSize,
+                backgroundPosition: '50% 50%',
+              }}
+            />
+          </div>
         ))}
         {noise > 0 && <div style={{ position: 'absolute', inset: 0, backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`, backgroundRepeat: 'repeat', backgroundSize: '150px 150px', opacity: (noise / 100) * 0.7, mixBlendMode: 'overlay', pointerEvents: 'none', borderRadius: 'inherit', zIndex: 10 }} />}
       </div>
