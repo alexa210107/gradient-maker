@@ -322,10 +322,10 @@ function ExportModal({ gradientCss, sortedStops, gradientType, angle, centerX, c
   const [exportW, exportH] = getExportSize();
   const previewPaddingBottom = `${((exportH / exportW) * 100).toFixed(4)}%`;
 
-  // For export preview: gentle drift using translate
+
   const applyFrame = useCallback((p) => {
-    // Subtle slow drift: sine wave on both axes
-    const driftAmt = (animationSpeed - 1) * 4 + 4; // 4–20px range
+   
+    const driftAmt = (animationSpeed - 1) * 4 + 4; 
     const dx = Math.sin(p * Math.PI * 2) * driftAmt;
     const dy = Math.cos(p * Math.PI * 2 * 0.7) * driftAmt * 0.6;
     const scaleVal = 1 + Math.sin(p * Math.PI * 2 * 0.5) * 0.012 * animationSpeed;
@@ -341,7 +341,7 @@ function ExportModal({ gradientCss, sortedStops, gradientType, angle, centerX, c
   useEffect(() => {
     if (!isAnimated) { applyFrame(0); return; }
     const loop = (ts) => {
-      if (isPlayingRef.current) { if (lastTsRef.current !== null) clockRef.current += (ts - lastTsRef.current) / 1000; lastTsRef.current = ts; applyFrame((clockRef.current % effectiveDuration) / effectiveDuration); } else { lastTsRef.current = null; }
+      if (isPlayingRef.current) { if (lastTsRef.current !== null) clockRef.current += ((ts - lastTsRef.current) / 1000) * animationSpeed; lastTsRef.current = ts; applyFrame((clockRef.current % effectiveDuration) / effectiveDuration); } else { lastTsRef.current = null; }
       rafRef.current = requestAnimationFrame(loop);
     };
     rafRef.current = requestAnimationFrame(loop);
@@ -412,7 +412,7 @@ function ExportModal({ gradientCss, sortedStops, gradientType, angle, centerX, c
     };
 
     if (p > 0) {
-      // Subtle drift: render slightly oversized canvas and crop with gentle offset
+   
       const pad = Math.round(Math.max(W, H) * 0.06 * animationSpeed);
       const VW = W + pad * 2;
       const VH = H + pad * 2;
@@ -785,9 +785,7 @@ function Preview({ gradientCss, aspectRatio, freeWidth, freeHeight, animationDur
     return () => clearTimeout(timer);
   }, [gradientCss]);
 
-  // RAF-driven nudge: background-size is 110% so there's a tiny margin to pan within.
-  // background-position oscillates between ~45%–55% on each axis — all colours stay
-  // fully visible the whole time, they just breathe gently in place.
+ 
   const innerLayerRef = useRef(null);
   const rafRef = useRef(null);
   const clockRef = useRef(0);
@@ -798,20 +796,28 @@ function Preview({ gradientCss, aspectRatio, freeWidth, freeHeight, animationDur
       if (innerLayerRef.current) innerLayerRef.current.style.backgroundPosition = '50% 50%';
       return;
     }
-    const speed = animationSpeed;
-    const duration = animationDuration;
+    // const speed = animationSpeed;
+    // const duration = animationDuration;
 
-    const tick = (ts) => {
-      if (lastTsRef.current !== null) clockRef.current += (ts - lastTsRef.current) / 1000;
-      lastTsRef.current = ts;
-      const t = (clockRef.current % duration) / duration; // 0→1 loop
-      // Two independent slow sine waves for x and y — always stay near 50%
-      const amp = 25; // pan ±25% around center — all colours stay in frame
-      const x = 50 + Math.sin(t * Math.PI * 2) * amp;
-      const y = 50 + Math.cos(t * Math.PI * 2 * 0.7) * amp * 0.6;
-      if (innerLayerRef.current) innerLayerRef.current.style.backgroundPosition = `${x.toFixed(2)}% ${y.toFixed(2)}%`;
-      rafRef.current = requestAnimationFrame(tick);
-    };
+  const tick = (ts) => {
+  if (lastTsRef.current !== null) {
+    clockRef.current += ((ts - lastTsRef.current) / 1000) * animationSpeed;
+  }
+
+  lastTsRef.current = ts;
+
+  const t = (clockRef.current % animationDuration) / animationDuration;
+
+  const amp = 25;
+  const x = 50 + Math.sin(t * Math.PI * 2) * amp;
+  const y = 50 + Math.cos(t * Math.PI * 2 * 0.7) * amp * 0.6;
+
+  if (innerLayerRef.current) {
+    innerLayerRef.current.style.backgroundPosition = `${x.toFixed(2)}% ${y.toFixed(2)}%`;
+  }
+
+  rafRef.current = requestAnimationFrame(tick);
+};
     rafRef.current = requestAnimationFrame(tick);
     return () => {
       cancelAnimationFrame(rafRef.current);
@@ -819,8 +825,8 @@ function Preview({ gradientCss, aspectRatio, freeWidth, freeHeight, animationDur
     };
   }, [isAnimated, animationDuration, animationSpeed]);
 
-  // background-size is 150% so the gradient is larger than the card.
-  // Panning 0%→100% on position moves exactly one "extra half" — all colours stay visible.
+  
+  
   const bgSize = isAnimated ? '150% 150%' : '100% 100%';
 
   return (

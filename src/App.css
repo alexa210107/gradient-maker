@@ -397,14 +397,6 @@ button, input { font-family: inherit; }
     direction: ltr;
 }
 
-/* @keyframes gentleDrift {
-    0%   { transform: translate(0%, 0%) scale(1); }
-    25%  { transform: translate(2%, 1.2%) scale(1.012); }
-    50%  { transform: translate(1.5%, -1.5%) scale(1.008); }
-    75%  { transform: translate(-1.2%, 1%) scale(1.015); }
-    100% { transform: translate(0%, 0%) scale(1); }
-} */
-
 .preview-card {
     border-radius: 24px;
     box-shadow: 0 30px 80px rgba(0,0,0,0.15);
@@ -511,13 +503,13 @@ button, input { font-family: inherit; }
   color: rgba(255, 100, 90, 0.8);
 }
  
-/* Quality slider inside export */
+
 .export-quality-row {
   margin-top: 4px;
   padding-top: 4px;
 }
  
-/* SVG / MP4 notice */
+
 .export-svg-note {
   font-size: 11px;
   color: rgba(255, 255, 255, 0.4);
